@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html >
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Feed Henry</title>
+  <link rel="stylesheet" href="build/style.min.css">
+</head>
+
+<body>
+  <div class="app-wrap">
+    <div class="offline-notify">Offline</div>
+    <h1>Hungry Henry</h1>
+    <div class="clock-wrap">
+
+      <small>Current Time</small>
+
+      <div id="clock"></div>
+      <div id="due"></div>
+
+      <div id="countup">
+        <small>Feeding Time</small>
+        <div class="countup-wrap">
+          <div id="minutes"></div> : <div id="seconds"></div>
+        </div>
+      </div>
+    </div>
+
+  <div id="buttons" class="buttons"></div>
+  <div id="data"></div>
+  <a href="#0" id="remove">Oops! Remove Last Feed</a> | <a href="#0" class="cancelFeed">Cancel Feed</a>
+  <div id="error"></div>
+</div>
+<script src="build/production.js"></script>
+</body>
+</html>
