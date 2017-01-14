@@ -5539,6 +5539,9 @@ var airtable_read_endpoint = "https://api.airtable.com/v0/appKNtqb1F4hrA3Gs/Feed
 var airtable_write_endpoint = "https://api.airtable.com/v0/appKNtqb1F4hrA3Gs/Feeds?api_key=" + api_key;
 
 var local_mysql_endpoint = "http://localhost:3000/api/feeds";
+var local_mysql_write_endpoint = "http://localhost:3000/api/feeds";
+var local_mysql_read_endpoint = "http://localhost:3000/api/feeds";
+var local_mysql_readrecent_endpoint = "http://localhost:3000/api/recentfeeds";
 
 
 var offset = new Date().getTimezoneOffset();
@@ -5708,7 +5711,7 @@ function countup(){
 function createRecord(start, end, side){
   console.log('Start: '+start+' End: '+end+' Side: '+side);
 
-  axios.post(local_mysql_endpoint, {
+  axios.post(local_mysql_write_endpoint, {
       "created": moment().format(),
       "start": start,
       "end": end,
@@ -5748,8 +5751,9 @@ document.querySelector('.cancelFeed').addEventListener('click', function(event) 
 function getLastFeed(){
   if(online == true) {
     axios
-      .get(airtable_read_endpoint)
+      .get(local_mysql_readrecent_endpoint)
       .then(function(result) {
+
         processLastFeedResults(result);
         localStorage.setItem('last8', JSON.stringify(result));
       });
@@ -5762,9 +5766,10 @@ function getLastFeed(){
 
 function processLastFeedResults(result){
   document.getElementById('data').innerHTML = '';
-  var data = result.data.records;
+  var data = result.data.feeds;
+  
 
-  var nextSide = data[0].fields.Side;
+  var nextSide = data[0].side;
 
   var buttonWrap = document.querySelector('.button-wrap');
 
@@ -5779,20 +5784,28 @@ function processLastFeedResults(result){
 
   for (var i = 0; i < data.length; i++) {
     // console.log(data[i]);
-    var feed = data[i].fields;
-    var start = feed.Start;
-    var end = feed.End;
-    var side = feed.Side;
-    var duration = feed.Duration;
-    message += printLastFeed(start, end, side, duration);
+    var feed = data[i];
+    var start = feed.start;
+    var end = feed.end;
+    var side = feed.side;
+    // var duration = feed.Duration;
+    var startTime = moment(start); //todays date
+    var endTime = moment(end); // another date
+    var duration = moment.duration(endTime.diff(startTime));
+    var mins = moment.duration(duration, "seconds").humanize();
+    var id = feed.id;
+    // mins = mins.toFixed(2);
+    // console.log(mins);
+    // var duration = mins;
+    message += printLastFeed(start, end, side, mins, id);
   }
   message += '</tbody></table>';
   document.getElementById('data').innerHTML = message;
 };
 
-function printLastFeed(start, end, side, duration) {
+function printLastFeed(start, end, side, duration, id) {
   var myDate = new Date(start);
-  var message = '<tr><td>'+pad(myDate.getHours())+':'+pad(myDate.getMinutes())+'</td><td>'+side+'</td><td>'+duration+' mins</td></tr>';
+  var message = '<tr id="feed-'+id+'"><td>'+pad(myDate.getHours())+':'+pad(myDate.getMinutes())+'</td><td>'+side+'</td><td>'+duration+'</td></tr>';
   return message;
 };
 
@@ -5805,9 +5818,7 @@ removeButton.addEventListener('click', function(e){
 });
 
 function removeLastFeed(lastID){
-  axios.delete('https://api.airtable.com/v0/appKNtqb1F4hrA3Gs/Feeds/'+lastID+'?api_key=keyt8UEserCuBu9u6', {
-    "deleted": true,
-    "id": lastID
+  axios.delete(local_mysql_endpoint+'/'+lastID, {
   }).then(function(response) {
     setTimeout(function() {
       alert('Removed');
@@ -5821,12 +5832,11 @@ function removeLastFeed(lastID){
 function getAllFeeds(){
   document.getElementById('due').innerHTML = '';
   axios
-      .get('https://api.airtable.com/v0/appKNtqb1F4hrA3Gs/Feeds?maxRecords=100&view=Main%20View&api_key=keyt8UEserCuBu9u6&sortField=_createdTime&sortDirection=desc')
+      .get(local_mysql_endpoint)
       .then(function(result) {
-
-        feeds = result.data.records;
+        feeds = result.data.feeds;
         // get the current feed start time
-        now = new Date(feeds[0].fields.Start);
+        now = new Date(feeds[0].start);
         currentHour = now.getHours();
         currentMin = now.getMinutes();
 
@@ -5837,57 +5847,29 @@ function getAllFeeds(){
 
         var diffs = [];
 
-        // loop through each feed
+
         for (var i = 1; i < feeds.length; i++){
-
-          feed = feeds[i].fields;
-          start  = new Date(feed.Start);
-
-          // get the start hour of THIS feed.
-          startHour = start.getHours();
-
-          // Does this Feed fall into our range?
-          if (startHour >= rangeLow && startHour <= rangeHigh) {
-
-            // Get the feed before this to make sure this isn't the second half of a feed
-            h = i + 1;
-
-            if(h != 100) {
-
-              prevStart = new Date(feeds[h].fields.Start);
-
-              prevDiff = getTimeDiff(start, prevStart);
-
-              // Get the feed after this to get the difference.
-              j = i - 1;
-              nextFeed = feeds[j].fields;
-              nextStart = new Date(nextFeed.Start);
-
-              diff = getTimeDiff(start, nextStart);
-
-              if(diff > 30 ){
-                // console.log('This feed start at '+ startHours+':'+startMinutes);
-                // console.log('The next start at '+ nextHours+':'+nextMinutes);
-                // console.log('That is '+diff+ ' mins between');
-                // console.log(' ');
-                diffs.push(diff);
-              }
-            }
-          }
+          var thisStart  = moment(feeds[i].start);
+          var lastStart  = moment(feeds[i-1].start);
+          var timeBetween = moment.duration(lastStart.diff(thisStart));
+          timeBetween = moment.duration(timeBetween).asMinutes();
+          timeBetween = Number(timeBetween);
+          thisStart = thisStart.hours();
+          if (thisStart >= rangeLow && thisStart <= rangeHigh) {
+            if((timeBetween < 30) || (timeBetween > 1000)) {} else {
+              diffs.push(timeBetween);
+            };
+          };
         }
 
-        var diffTotal = 0;
-        for (var i = 0; i < diffs.length; i++){
-          diffTotal += diffs[i];
-        }
-        diffAvg = diffTotal / diffs.length
-        diffAvg = Math.round( diffAvg);
+        var sum = diffs.reduce(function(a, b) { return a + b; });
+        var avg = sum / diffs.length;
 
-        diffHours = Math.floor(diffAvg/60);
-        diffMins = diffAvg%60;
+        console.log(avg);
 
-
-
+        diffHours = Math.floor(avg/60);
+        diffMins = avg%60;
+        console.log(currentHour);
         nextHour = currentHour + diffHours;
         nextMin = currentMin + diffMins;
         if(nextMin > 59){
@@ -5897,6 +5879,7 @@ function getAllFeeds(){
         if(nextMin < 10){
           nextMin = '0'+nextMin;
         }
+        nextMin = nextMin.toFixed(0);
         document.getElementById('due').innerHTML = '<p>Due around '+nextHour+':'+nextMin+'</p>';
       })
       .catch(function (error) {
@@ -5904,18 +5887,4 @@ function getAllFeeds(){
         document.getElementById('error').innerHTML = '<p class="error">ESTIMATE: '+error+'</p>';
       });
 
-}
-
-
-function getTimeDiff(start, nextStart){
-  startHours = pad(start.getHours());
-  startMinutes = pad(start.getMinutes());
-
-  nextHours = pad(nextStart.getHours());
-  nextMinutes = pad(nextStart.getMinutes());
-
-  diff = ((nextHours - startHours) * 60) + (nextMinutes - startMinutes);
-
-
-  return diff;
 }

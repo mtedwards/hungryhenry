@@ -1,8 +1,9 @@
 function getLastFeed(){
   if(online == true) {
     axios
-      .get(airtable_read_endpoint)
+      .get(local_mysql_readrecent_endpoint)
       .then(function(result) {
+
         processLastFeedResults(result);
         localStorage.setItem('last8', JSON.stringify(result));
       });
@@ -15,9 +16,10 @@ function getLastFeed(){
 
 function processLastFeedResults(result){
   document.getElementById('data').innerHTML = '';
-  var data = result.data.records;
+  var data = result.data.feeds;
+  
 
-  var nextSide = data[0].fields.Side;
+  var nextSide = data[0].side;
 
   var buttonWrap = document.querySelector('.button-wrap');
 
@@ -32,20 +34,28 @@ function processLastFeedResults(result){
 
   for (var i = 0; i < data.length; i++) {
     // console.log(data[i]);
-    var feed = data[i].fields;
-    var start = feed.Start;
-    var end = feed.End;
-    var side = feed.Side;
-    var duration = feed.Duration;
-    message += printLastFeed(start, end, side, duration);
+    var feed = data[i];
+    var start = feed.start;
+    var end = feed.end;
+    var side = feed.side;
+    // var duration = feed.Duration;
+    var startTime = moment(start); //todays date
+    var endTime = moment(end); // another date
+    var duration = moment.duration(endTime.diff(startTime));
+    var mins = moment.duration(duration, "seconds").humanize();
+    var id = feed.id;
+    // mins = mins.toFixed(2);
+    // console.log(mins);
+    // var duration = mins;
+    message += printLastFeed(start, end, side, mins, id);
   }
   message += '</tbody></table>';
   document.getElementById('data').innerHTML = message;
 };
 
-function printLastFeed(start, end, side, duration) {
+function printLastFeed(start, end, side, duration, id) {
   var myDate = new Date(start);
-  var message = '<tr><td>'+pad(myDate.getHours())+':'+pad(myDate.getMinutes())+'</td><td>'+side+'</td><td>'+duration+' mins</td></tr>';
+  var message = '<tr id="feed-'+id+'"><td>'+pad(myDate.getHours())+':'+pad(myDate.getMinutes())+'</td><td>'+side+'</td><td>'+duration+'</td></tr>';
   return message;
 };
 
@@ -58,9 +68,7 @@ removeButton.addEventListener('click', function(e){
 });
 
 function removeLastFeed(lastID){
-  axios.delete('https://api.airtable.com/v0/appKNtqb1F4hrA3Gs/Feeds/'+lastID+'?api_key=keyt8UEserCuBu9u6', {
-    "deleted": true,
-    "id": lastID
+  axios.delete(local_mysql_endpoint+'/'+lastID, {
   }).then(function(response) {
     setTimeout(function() {
       alert('Removed');

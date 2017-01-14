@@ -6,6 +6,9 @@ var airtable_read_endpoint = "https://api.airtable.com/v0/appKNtqb1F4hrA3Gs/Feed
 var airtable_write_endpoint = "https://api.airtable.com/v0/appKNtqb1F4hrA3Gs/Feeds?api_key=" + api_key;
 
 var local_mysql_endpoint = "http://localhost:3000/api/feeds";
+var local_mysql_write_endpoint = "http://localhost:3000/api/feeds";
+var local_mysql_read_endpoint = "http://localhost:3000/api/feeds";
+var local_mysql_readrecent_endpoint = "http://localhost:3000/api/recentfeeds";
 
 
 var offset = new Date().getTimezoneOffset();

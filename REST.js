@@ -23,6 +23,42 @@ REST_ROUTER.prototype.handleRoutes= function(router,connection,md5) {
             }
         });
     });
+    router.get("/recentfeeds",function(req,res){
+        var query = "SELECT * FROM ?? order by start desc limit 8";
+        var table = ["feeds"];
+        query = mysql.format(query,table);
+        connection.query(query,function(err,rows){
+            if(err) {
+                res.json({"Error" : true, "Message" : "Error executing MySQL query"});
+            } else {
+                res.json({"Error" : false, "Message" : "Success", "feeds" : rows});
+            }
+        });
+    });
+    router.get("/feeds",function(req,res){
+        var query = "SELECT * FROM ?? order by start desc limit 100";
+        var table = ["feeds"];
+        query = mysql.format(query,table);
+        connection.query(query,function(err,rows){
+            if(err) {
+                res.json({"Error" : true, "Message" : "Error executing MySQL query"});
+            } else {
+                res.json({"Error" : false, "Message" : "Success", "feeds" : rows});
+            }
+        });
+    });
+    router.delete("/feeds/:id",function(req,res){
+        var query = "DELETE from ?? WHERE ??=?";
+        var table = ["feeds","id",req.params.id];
+        query = mysql.format(query,table);
+        connection.query(query,function(err,rows){
+            if(err) {
+                res.json({"Error" : true, "Message" : "Error executing MySQL query"});
+            } else {
+                res.json({"Error" : false, "Message" : "Deleted the feed with id "+req.params.id});
+            }
+        });
+    });
 }
 
 module.exports = REST_ROUTER;

@@ -103,7 +103,7 @@ function countup(){
 function createRecord(start, end, side){
   console.log('Start: '+start+' End: '+end+' Side: '+side);
 
-  axios.post(local_mysql_endpoint, {
+  axios.post(local_mysql_write_endpoint, {
       "created": moment().format(),
       "start": start,
       "end": end,
